@@ -7,11 +7,13 @@ import (
 	"log"
 	"os"
 	"time"
+
+	slr "satsolver/solver"
 )
 
 const TIMEOUT = 30 * time.Second
 
-var configs []VSIDSConfig = []VSIDSConfig{
+var configs []slr.VSIDSConfig = []slr.VSIDSConfig{
 	{
 		Name:             "minisat-classic",
 		InitialBumpInc:   1.0,   // Стандартный bump
@@ -42,17 +44,6 @@ var configs []VSIDSConfig = []VSIDSConfig{
 	},
 }
 
-func printAssignments(nvars int, finalS SolverState) {
-	fmt.Print("Assignments: ")
-	for v := 1; v <= nvars; v++ {
-		if finalS.assigned[v] {
-			val := finalS.assignment[v] == 1
-			fmt.Printf("%d=%t ", v, val)
-		}
-	}
-	fmt.Println()
-}
-
 func main() {
 	cnfFile := flag.String("f", "", "DIMACS file")
 	verboseMode := flag.Bool("v", false, "enable verbose mode")
@@ -64,7 +55,7 @@ func main() {
 		log.Fatalf("Usage: %s -f <cnf_file> [-verbose -p | -c <config_index>]", os.Args[0])
 	}
 
-	nvars, formula, err := parseDIMACS(*cnfFile)
+	nvars, formula, err := slr.ParseDIMACS(*cnfFile)
 	if err != nil {
 		log.Fatalf("CNF parsing error: %v\n", err)
 		return
@@ -73,24 +64,24 @@ func main() {
 	start := time.Now()
 
 	var sat bool
-	var finalState *SolverState
+	var finalState *slr.SolverState
 	var configName string
 
 	if *parallelMode {
 		ctx, cancel := context.WithTimeout(context.Background(), TIMEOUT)
 		defer cancel()
-		sat, finalState, configName = runPortfolioSolver(ctx, nvars, formula, configs)
+		sat, finalState, configName = slr.RunPortfolioSolver(ctx, nvars, formula, configs)
 
 		if configName == "" {
 			fmt.Printf("Filename: %s\tResult: TIMEOUT\n", *cnfFile)
 			return
 		}
 	} else {
-		h := NewVSIDSHeuristic(nvars, configs[*chosenConfig])
+		h := slr.NewVSIDSHeuristic(nvars, configs[*chosenConfig])
 		h.Init(formula)
 
-		s := NewSolverState(nvars)
-		sat, finalState = dpll(formula, s, h)
+		s := slr.NewSolverState(nvars)
+		sat, finalState = slr.Dpll(formula, s, h)
 		configName = configs[*chosenConfig].Name
 	}
 
@@ -103,10 +94,10 @@ func main() {
 		ans = "UNSAT"
 	}
 
-	fmt.Printf("Filename: %s\tResult: %s\tElapsed time: %s\tFastest Config: %s\n",
+	fmt.Printf("Filename: %s\tResult: %s\tElapsed time: %s\tConfig: %s\n",
 		*cnfFile, ans, elapsed, configName)
 
 	if *verboseMode && sat {
-		printAssignments(nvars, *finalState)
+		slr.PrintAssignments(nvars, *finalState)
 	}
 }

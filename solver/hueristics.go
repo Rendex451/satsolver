@@ -1,4 +1,4 @@
-package main
+package solver
 
 import "errors"
 
@@ -43,7 +43,7 @@ func (h *VSIDSHeuristic) Init(formula Formula) {
 	}
 }
 
-func (h *VSIDSHeuristic) Decay() {
+func (h *VSIDSHeuristic) decay() {
 	h.bumpInc *= h.bumpFactor
 	if h.bumpInc > 1e100 {
 		h.rescale()
@@ -58,7 +58,7 @@ func (h *VSIDSHeuristic) rescale() {
 	h.bumpInc /= h.RescaleFactor
 }
 
-func (h *VSIDSHeuristic) Bump(lit Literal) {
+func (h *VSIDSHeuristic) bump(lit Literal) {
 	if lit > 0 {
 		h.posActivity[int(lit)] += h.bumpInc
 	} else {
@@ -66,7 +66,7 @@ func (h *VSIDSHeuristic) Bump(lit Literal) {
 	}
 }
 
-func (h *VSIDSHeuristic) SelectLiteral(s *SolverState) (Literal, error) {
+func (h *VSIDSHeuristic) selectLiteral(s *SolverState) (Literal, error) {
 	maxScore := -1.0
 	var bestLit Literal = 0
 	for v := 1; v <= s.nvars; v++ {

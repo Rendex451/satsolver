@@ -1,4 +1,4 @@
-package main
+package solver
 
 import (
 	"slices"
@@ -8,7 +8,6 @@ type Literal int
 type Clause []Literal
 type Formula []Clause
 
-// SolverState для assignment с 3 состояниями
 type SolverState struct {
 	assignment []int  // 0=undefined, 1=true, -1=false (index=abs(var))
 	assigned   []bool // true если назначено (index=abs(var))
@@ -29,13 +28,6 @@ func (s *SolverState) Assign(varIdx int, value bool) {
 		s.assignment[varIdx] = -1
 	}
 	s.assigned[varIdx] = true
-}
-
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
 }
 
 func checkClauseValidity(formula Formula) bool {
@@ -163,19 +155,19 @@ func pureLiteralAssignment(formula Formula, s *SolverState) (Formula, *SolverSta
 	return updatedFormula, s
 }
 
-// dpll:
+// Dpll:
 // Базовые случаи: Пустая формула — SAT; Пустая клауза — UNSAT; Если удовлетворена — SAT.
 // Вызывает unitPropagate и pureLiteralAssignment для упрощения.
 // Вызывает h.Decay() перед выбором.
 // Выбирает литерал с помощью VSIDS.
 // Создаёт копию состояния s1, присваивает значение (true для selectedLiteral > 0).
 // Упрощает формулу: Фильтрует клаузы с selectedLiteral, удаляет -selectedLiteral из остальных.
-// Рекурсивно вызывает dpll на s1.
+// Рекурсивно вызывает Dpll на s1.
 // Если провал — bump противоположного литерала (увеличивает его приоритет для будущих выборов).
 // Аналогично для противоположной ветви (s2, false).
 // Если и вторая ветвь провал — bump оригинального литерала.
 // Возвращает результат и финальное состояние.
-func dpll(formula Formula, s *SolverState, h *VSIDSHeuristic) (bool, *SolverState) {
+func Dpll(formula Formula, s *SolverState, h *VSIDSHeuristic) (bool, *SolverState) {
 	if len(formula) == 0 {
 		return true, s
 	}
@@ -196,9 +188,9 @@ func dpll(formula Formula, s *SolverState, h *VSIDSHeuristic) (bool, *SolverStat
 		return false, s
 	}
 
-	h.Decay()
+	h.decay()
 
-	selectedLiteral, err := h.SelectLiteral(s)
+	selectedLiteral, err := h.selectLiteral(s)
 	if err != nil {
 		return false, s
 	}
@@ -218,12 +210,12 @@ func dpll(formula Formula, s *SolverState, h *VSIDSHeuristic) (bool, *SolverStat
 		}
 	}
 
-	result, finalS := dpll(simplifiedFormula, s1, h)
+	result, finalS := Dpll(simplifiedFormula, s1, h)
 	if result {
 		return result, finalS
 	}
 
-	h.Bump(-selectedLiteral)
+	h.bump(-selectedLiteral)
 
 	simplifiedFormula = make(Formula, 0)
 	s2 := NewSolverState(s.nvars)
@@ -240,9 +232,9 @@ func dpll(formula Formula, s *SolverState, h *VSIDSHeuristic) (bool, *SolverStat
 		}
 	}
 
-	result, finalS = dpll(simplifiedFormula, s2, h)
+	result, finalS = Dpll(simplifiedFormula, s2, h)
 	if !result {
-		h.Bump(selectedLiteral)
+		h.bump(selectedLiteral)
 	}
 	return result, finalS
 }

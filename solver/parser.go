@@ -1,4 +1,4 @@
-package main
+package solver
 
 import (
 	"bufio"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func parseDIMACS(filename string) (int, Formula, error) {
+func ParseDIMACS(filename string) (int, Formula, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return 0, nil, err

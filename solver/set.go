@@ -1,4 +1,4 @@
-package main
+package solver
 
 type Set struct {
 	elements map[Literal]struct{}
