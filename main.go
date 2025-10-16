@@ -131,13 +131,13 @@ func abs(x int) int {
 	return x
 }
 
-func fullUnitPropagation(clauses []Clause, assignment Assignment) bool {
+func fullUnitPropagation(clauses []Clause, assignment *Assignment) bool {
 	changed := true
 	for changed {
 		changed = false
 
-		for _, clause := range clauses {
-			satisfied, unassigned := isClauseSatisfied(clause, assignment)
+		for i := range clauses {
+			satisfied, unassigned := isClauseSatisfied(clauses[i], *assignment)
 			if satisfied {
 				continue
 			}
@@ -151,7 +151,7 @@ func fullUnitPropagation(clauses []Clause, assignment Assignment) bool {
 				// Unit clause
 				literal := unassigned[0]
 				varIdx := abs(literal)
-				assignment[varIdx] = literal > 0
+				(*assignment)[varIdx] = literal > 0
 				changed = true
 				break // Перезапускаем проверку
 			}
@@ -178,40 +178,45 @@ func copyAssignment(original Assignment) Assignment {
 	return copy
 }
 
-func dpll(clauses []Clause, assignment Assignment, nvars int) bool {
+func dpll(clauses []Clause, assignment Assignment, nvars int) Assignment {
+	// Создаем копию для модификации
+	currentAssignment := copyAssignment(assignment)
+
 	// Выполняем полную unit propagation
-	if !fullUnitPropagation(clauses, assignment) {
-		return false
+	if !fullUnitPropagation(clauses, &currentAssignment) {
+		return nil
 	}
 
 	// Проверяем, все ли клаузы удовлетворены
-	if allClausesSatisfied(clauses, assignment) {
-		return true
+	if allClausesSatisfied(clauses, currentAssignment) {
+		return currentAssignment
 	}
 
 	// Выбираем непроназначенную переменную для ветвления
 	for v := 1; v <= nvars; v++ {
-		if _, exists := assignment[v]; !exists {
+		if _, exists := currentAssignment[v]; !exists {
 			// Пробуем True
-			newAssignment := copyAssignment(assignment)
-			newAssignment[v] = true
-			if dpll(clauses, newAssignment, nvars) {
-				return true
+			trueAssignment := copyAssignment(currentAssignment)
+			trueAssignment[v] = true
+			result := dpll(clauses, trueAssignment, nvars)
+			if result != nil {
+				return result // Возвращаем успешное назначение
 			}
 
 			// Пробуем False
-			newAssignment = copyAssignment(assignment)
-			newAssignment[v] = false
-			if dpll(clauses, newAssignment, nvars) {
-				return true
+			falseAssignment := copyAssignment(currentAssignment)
+			falseAssignment[v] = false
+			result = dpll(clauses, falseAssignment, nvars)
+			if result != nil {
+				return result // Возвращаем успешное назначение
 			}
 
 			// Оба значения не работают
-			return false
+			return nil
 		}
 	}
 
-	return false
+	return nil
 }
 
 func printAssignment(assignment Assignment) {
@@ -228,27 +233,26 @@ func printAssignment(assignment Assignment) {
 }
 
 func main() {
-	nvars, clauses, err := parseDIMACS("cnfs/unsat/uuf50-01.cnf")
+	nvars, clauses, err := parseDIMACS("cnfs/sat/big/CBS_k3_n100_m449_b90_2.cnf")
 	if err != nil {
-		fmt.Printf("Ошибка чтения файла: %v\n", err)
+		fmt.Printf("DIMACS parsing error: %v\n", err)
 		return
 	}
 
 	start := time.Now()
 
-	fmt.Printf("Количество переменных: %d\n", nvars)
-	fmt.Printf("Количество дизъюнктов: %d\n", len(clauses))
-	// 	if len(clauses) > 0 {
-	// 		fmt.Printf("Пример клаузы: %v\n", clauses[0])
-	// 	}
+	fmt.Printf("Vars: %d\n", nvars)
+	fmt.Printf("Clauses: %d\n", len(clauses))
 
-	assignment := make(Assignment)
-	if dpll(clauses, assignment, nvars) {
+	res := dpll(clauses, make(Assignment), nvars)
+	execTime := time.Since(start)
+
+	if res != nil {
 		fmt.Println("SAT")
-		printAssignment(assignment)
+		printAssignment(res)
 	} else {
 		fmt.Println("UNSAT")
 	}
 
-	fmt.Printf("Время выполнения: %v\n", time.Since(start))
+	fmt.Printf("Exec time: %v\n", execTime)
 }
