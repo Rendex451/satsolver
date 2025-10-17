@@ -92,7 +92,7 @@ func main() {
 		configName = flagsConfig[*chosenConfig].Name
 	}
 
-	elapsed := time.Since(start)
+	elapsed := time.Since(start).Microseconds()
 
 	var ans string
 	if sat {
