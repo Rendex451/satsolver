@@ -44,15 +44,22 @@ var configs []slr.VSIDSConfig = []slr.VSIDSConfig{
 	},
 }
 
+var flagsConfig = map[string]slr.VSIDSConfig{
+	"mc": configs[0],
+	"ga": configs[1],
+	"sl": configs[2],
+	"ih": configs[3],
+}
+
 func main() {
 	cnfFile := flag.String("f", "", "DIMACS file")
 	verboseMode := flag.Bool("v", false, "enable verbose mode")
 	parallelMode := flag.Bool("p", false, "enable parallel portfolio mode")
-	chosenConfig := flag.Int("c", 0, "choose config index (0 to 3) when not in parallel mode")
+	chosenConfig := flag.String("c", "mc", "choose config to run (\"mc\", \"ga\", \"sl\", \"ih\") when not in parallel mode")
 	flag.Parse()
 
-	if *cnfFile == "" || (!*parallelMode && (*chosenConfig < 0 || *chosenConfig >= len(configs))) {
-		log.Fatalf("Usage: %s -f <cnf_file> [-verbose -p | -c <config_index>]", os.Args[0])
+	if *cnfFile == "" || (!*parallelMode && (flagsConfig[*chosenConfig] == slr.VSIDSConfig{})) {
+		log.Fatalf("Usage: %s -f <cnf_file> [-verbose -p | -c <config_name>]", os.Args[0])
 	}
 
 	nvars, formula, err := slr.ParseDIMACS(*cnfFile)
@@ -77,12 +84,12 @@ func main() {
 			return
 		}
 	} else {
-		h := slr.NewVSIDSHeuristic(nvars, configs[*chosenConfig])
+		h := slr.NewVSIDSHeuristic(nvars, flagsConfig[*chosenConfig])
 		h.Init(formula)
 
 		s := slr.NewSolverState(nvars)
 		sat, finalState = slr.Dpll(formula, s, h)
-		configName = configs[*chosenConfig].Name
+		configName = flagsConfig[*chosenConfig].Name
 	}
 
 	elapsed := time.Since(start)
