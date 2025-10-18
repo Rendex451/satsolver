@@ -22,7 +22,7 @@ var configs []slr.VSIDSConfig = []slr.VSIDSConfig{
 		RescaleFactor:    1e100,
 	},
 	{
-		Name:             "glucose-aggressive",
+		Name:             "rapid-decay",
 		InitialBumpInc:   1.5,  // Более сильные bumps
 		DecayFactor:      0.92, // Быстрее забывает старые конфликты
 		RescaleThreshold: 1e50, // Частая нормализация
@@ -46,7 +46,7 @@ var configs []slr.VSIDSConfig = []slr.VSIDSConfig{
 
 var flagsConfig = map[string]slr.VSIDSConfig{
 	"mc": configs[0],
-	"ga": configs[1],
+	"rd": configs[1],
 	"sl": configs[2],
 	"ih": configs[3],
 }
@@ -55,7 +55,7 @@ func main() {
 	cnfFile := flag.String("f", "", "DIMACS file")
 	verboseMode := flag.Bool("v", false, "enable verbose mode")
 	parallelMode := flag.Bool("p", false, "enable parallel portfolio mode")
-	chosenConfig := flag.String("c", "mc", "choose config to run (\"mc\", \"ga\", \"sl\", \"ih\") when not in parallel mode")
+	chosenConfig := flag.String("c", "mc", "choose config to run (\"mc\", \"rd\", \"sl\", \"ih\") when not in parallel mode")
 	flag.Parse()
 
 	if *cnfFile == "" || (!*parallelMode && (flagsConfig[*chosenConfig] == slr.VSIDSConfig{})) {
@@ -92,7 +92,8 @@ func main() {
 		configName = flagsConfig[*chosenConfig].Name
 	}
 
-	elapsed := time.Since(start).Microseconds()
+	elapsed := time.Since(start)
+	elapsedMs := float64(elapsed.Nanoseconds()) / 1e6
 
 	var ans string
 	if sat {
@@ -101,8 +102,8 @@ func main() {
 		ans = "UNSAT"
 	}
 
-	fmt.Printf("Filename: %s\tResult: %s\tElapsed time: %s\tConfig: %s\n",
-		*cnfFile, ans, elapsed, configName)
+	fmt.Printf("Filename: %s\tResult: %s\tElapsed time: %.4f ms\tConfig: %s\n",
+		*cnfFile, ans, elapsedMs, configName)
 
 	if *verboseMode && sat {
 		slr.PrintAssignments(nvars, *finalState)

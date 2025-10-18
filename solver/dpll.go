@@ -22,7 +22,7 @@ func NewSolverState(nvars int) *SolverState {
 	}
 }
 
-func (s *SolverState) Assign(varIdx int, value bool) {
+func (s *SolverState) assign(varIdx int, value bool) {
 	s.assignment[varIdx] = 1
 	if !value {
 		s.assignment[varIdx] = -1
@@ -91,7 +91,7 @@ func unitPropagate(formula Formula, s *SolverState) (Formula, *SolverState) {
 		for _, clause := range unitClauses {
 			literal := clause[0]
 			varIdx := abs(int(literal))
-			s.Assign(varIdx, literal > 0)
+			s.assign(varIdx, literal > 0)
 
 			var filteredFormula Formula
 			for _, c := range updatedFormula {
@@ -141,7 +141,7 @@ func pureLiteralAssignment(formula Formula, s *SolverState) (Formula, *SolverSta
 
 	for _, literal := range pureLiterals.Values() {
 		varIdx := abs(int(literal))
-		s.Assign(varIdx, literal > 0)
+		s.assign(varIdx, literal > 0)
 
 		var filteredFormula Formula
 		for _, clause := range updatedFormula {
@@ -199,7 +199,7 @@ func Dpll(formula Formula, s *SolverState, h *VSIDSHeuristic) (bool, *SolverStat
 	s1 := NewSolverState(s.nvars)
 	copy(s1.assignment, s.assignment)
 	copy(s1.assigned, s.assigned)
-	s1.Assign(abs(int(selectedLiteral)), selectedLiteral > 0)
+	s1.assign(abs(int(selectedLiteral)), selectedLiteral > 0)
 	for _, clause := range newFormula {
 		if !slices.Contains(clause, selectedLiteral) {
 			updatedClause := slices.Clone(clause)
@@ -221,7 +221,7 @@ func Dpll(formula Formula, s *SolverState, h *VSIDSHeuristic) (bool, *SolverStat
 	s2 := NewSolverState(s.nvars)
 	copy(s2.assignment, s.assignment)
 	copy(s2.assigned, s.assigned)
-	s2.Assign(abs(int(selectedLiteral)), selectedLiteral < 0)
+	s2.assign(abs(int(selectedLiteral)), selectedLiteral < 0)
 	for _, clause := range newFormula {
 		if !slices.Contains(clause, -selectedLiteral) {
 			updatedClause := slices.Clone(clause)
